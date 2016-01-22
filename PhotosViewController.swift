@@ -104,18 +104,27 @@ class PhotosViewController: UIViewController, UITableViewDataSource, UITableView
         headerView.backgroundColor = UIColor(white: 1, alpha: 0.9)
         
         let profileView = UIImageView(frame: CGRect(x: 10, y: 10, width: 30, height: 30))
+        let profileLabel = UILabel(frame: CGRect(x: 50, y: 0, width: 320, height: 50))
+
+        profileLabel.text = instagrams![section].valueForKeyPath("user.username") as? String
+
+        
+        
         profileView.clipsToBounds = true
         profileView.layer.cornerRadius = 15;
         profileView.layer.borderColor = UIColor(white: 0.7, alpha: 0.8).CGColor
         profileView.layer.borderWidth = 1;
         
         // Use the section number to get the right URL
-        //profileView.setImageWithURL(...)
+        let imageURL = NSURL(string: instagrams![section].valueForKeyPath("user.profile_picture") as! String )
+        profileView.setImageWithURL(imageURL!)
+
         
         headerView.addSubview(profileView)
-        
-        // Add a UILabel for the username here        
+        headerView.addSubview(profileLabel)
 
+        // Add a UILabel for the username here
+        
         
         return headerView
   
