@@ -9,11 +9,13 @@
 import UIKit
 import AFNetworking
 
-class PhotosViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+class PhotosViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UIScrollViewDelegate {
 
     @IBOutlet weak var tableView: UITableView!
     
     var instagrams: [NSDictionary]?
+    var isMoreDataLoading = false
+    var refreshControl: UIRefreshControl!     // Initialize a UIRefreshControl
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -22,6 +24,10 @@ class PhotosViewController: UIViewController, UITableViewDataSource, UITableView
         tableView.delegate = self
         tableView.dataSource = self
         
+        self.refreshControl = UIRefreshControl()
+        refreshControl.addTarget(self, action: "refreshControlAction", forControlEvents: UIControlEvents.ValueChanged)
+        tableView.insertSubview(refreshControl, atIndex: 0)
+        
         fetchInstagramAPI()
         
     }
@@ -29,6 +35,21 @@ class PhotosViewController: UIViewController, UITableViewDataSource, UITableView
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
+    }
+    
+    func delay(delay:Double, closure:()->()) {
+        dispatch_after(
+            dispatch_time(
+                DISPATCH_TIME_NOW,
+                Int64(delay * Double(NSEC_PER_SEC))
+            ),
+            dispatch_get_main_queue(), closure)
+    }
+
+    func refreshControlAction() {
+        delay(1, closure: {
+            self.refreshControl.endRefreshing()
+        })
     }
     
     func fetchInstagramAPI() {
@@ -48,9 +69,14 @@ class PhotosViewController: UIViewController, UITableViewDataSource, UITableView
                         data, options:[]) as? NSDictionary {
                             NSLog("response: \(responseDictionary)")
                             
+                            // Update flag
+                            self.isMoreDataLoading = false
+                            
                             self.instagrams = responseDictionary["data"] as? [NSDictionary]
     
                             self.tableView.reloadData()
+                            self.refreshControl.endRefreshing()
+
                             
                             
                     }
@@ -133,5 +159,35 @@ class PhotosViewController: UIViewController, UITableViewDataSource, UITableView
     func tableView(tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
         return 30
     }
+    
+    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
+        
+        let indexPath = tableView.indexPathForCell(sender as! UITableViewCell)
+        let photoDetailsViewController = segue.destinationViewController as! PhotoDetailsViewController
+        let instagram = instagrams![indexPath!.section]             // "section" increases, "row" remains at 0
+        photoDetailsViewController.detailsInstagram = instagram
+        
+    }
+    
+    
+    //infinite scroll function
+    func scrollViewDidScroll(scrollView: UIScrollView) {
+        if (!isMoreDataLoading) {
+            // Calculate the position of one screen length before the bottom of the results
+            let scrollViewContentHeight = tableView.contentSize.height
+            let scrollOffsetThreshold = scrollViewContentHeight - tableView.bounds.size.height
+            
+            // When the user has scrolled past the threshold, start requesting
+            if(scrollView.contentOffset.y > scrollOffsetThreshold && tableView.dragging) {
+                isMoreDataLoading = true
+                
+                // ... Code to load more results ...
+                fetchInstagramAPI()
+            }
+        }
+    }
+    
+    
+    
     
 }
